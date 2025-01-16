@@ -6,6 +6,10 @@
 #include "lua.h"
 #include "lauxlib.h"
 
+#if (LUA_VERSION_NUM >= 504)
+  #define LINUXSYS_LUA54_NEWER
+#endif
+
 #define LUA_ADDCONST(L, name) \
 	lua_pushnumber(L, name); \
 	lua_setfield(L, -2, #name);
@@ -24,7 +28,11 @@ static int linuxsys_mount(lua_State *L)
 		luaL_optstring(L, 1, NULL), /* source */
 		luaL_checkstring(L, 2),     /* target */
 		luaL_optstring(L, 3, NULL), /* type */
+#ifdef LINUXSYS_LUA54_NEWER
+		luaL_optinteger(L, 4, 0),      /* flags */
+#else
 		luaL_optlong(L, 4, 0),      /* flags */
+#endif
 		luaL_optstring(L, 5, NULL)  /* data */
 	));
 	return 1; /* number of results */
@@ -34,7 +42,11 @@ static int linuxsys_umount(lua_State *L)
 {
 	lua_pushnumber(L, umount2(
 		luaL_checkstring(L, 1),     /* target */
+#ifdef LINUXSYS_LUA54_NEWER
+		luaL_optinteger(L, 2, 0)      /* flags */
+#else
 		luaL_optlong(L, 2, 0)       /* flags */
+#endif
 	));
 	return 1; /* number of results */
 }
@@ -58,10 +70,18 @@ static const struct luaL_Reg linuxsys_lib [] = {
 /*
  * Open library
  */
+#ifdef LINUXSYS_LUA54_NEWER
+int luaopen_linuxsys (lua_State *L)
+{
+	/* Register functions in library */
+  lua_createtable(L,0,0);
+  luaL_setfuncs(L, linuxsys_lib, 0);
+#else
 int luaopen_linuxsys_c (lua_State *L)
 {
 	/* Register functions in library */
 	luaL_register(L, "linuxsys", linuxsys_lib);
+#endif
 
 	/* Register constants in library */
 	/* unshare(2) constants from sched.h */
